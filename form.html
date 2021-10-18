@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <title></title>
+    <title>GAS generator Lex Nextflix</title>
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
 
     <style>
@@ -55,13 +55,16 @@
 </head>
 <body>
 <div class="wrapper">
-    <form class="form-signin" method="get" action="/hit">
-        <h2 class="form-signin-heading">Complétez le formulaire</h2>
-        <input type="number" min="1000" max="9999" class="form-control" name="zip" placeholder="NPA" required="" autofocus="" />
-        <input type="date" class="form-control" name="bday" placeholder="Date de naissance" required=""/>
-        <input type="text" class="form-control" name="address" placeholder="Adresse" required=""/>
+    <form class="form-signin" method="post" action="/hit" enctype="multipart/form-data">
+        <h2 class="form-signin-heading">GAS generator Lex Nextflix</h2>
+        <label> CSV *
+            <input type="file" class="form-control" name="csv" placeholder="CSV" autofocus="" required />
+        </label>
+        <label> PDF
+            <input type="file" class="form-control" name="pdf" placeholder="PDF" autofocus="" />
+        </label>
 
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Générer</button>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Generate</button>
     </form>
 </div>
 </body>

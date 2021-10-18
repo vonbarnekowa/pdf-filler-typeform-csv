@@ -1,134 +1,204 @@
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs');
 const express = require('express');
+const fileUpload = require('express-fileupload');
+const csv = require('fast-csv');
+const ObjectsToCsv = require('objects-to-csv');
 const app = express();
 const port = 3000;
+
+let pdfBytes = null;
+let errorArray = [];
 
 app.get('/',function(req,res) {
     res.sendFile(__dirname +'/form.html');
 });
 
-/*app.get('/hit', function(req, res, next) {
+function fillFirstPage(firstPage, bday, address, city, zip, state, font) {
+    firstPage.drawText(zip, {
+        x: 50,
+        y: 256,
+        size: 15,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
 
-    var filename = "WhateverFilenameYouWant.pdf";
-    // Be careful of special characters
-    var error = false
+    firstPage.drawText(city, {
+        x: 185,
+        y: 256,
+        size: 15,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
 
-    var npa = req.query.zip;
-    var address = req.query.address;
-    var bday = req.query.bday;
-    var communeD = ""
-    var canton = ""
-    console.log(commune[npa]);
+    firstPage.drawText(state, {
+        x: 450,
+        y: 256,
+        size: 15,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
 
-    if (commune[npa] !== undefined) {
-        communeD = commune[npa].commune;
-        canton = commune[npa].canton;
-    } else {
-        error = true;
-    }
+    var date = new Date(bday);
+    firstPage.drawText(date.getDate()+"/"+(date.getMonth()+1)+"/"+date.getFullYear(), {
+        x: 212,
+        y: 218,
+        size: 8,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+
+    firstPage.drawText(address, {
+        x: 265,
+        y: 218,
+        size: 8,
+        font: font,
+        color: rgb(0, 0, 0)
+    })
+
+    return firstPage;
+}
+
+function fillSecondPage(secondPage, firstName, lastName, address, city, zip, font) {
+    return secondPage;
+
+    secondPage.drawText(firstName + " " + lastName, {
+        x: 75,
+        y: 255,
+        size: 8,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+
+    secondPage.drawText(address, {
+        x: 60,
+        y: 238,
+        size: 8,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+
+    secondPage.drawText(zip + " " + city, {
+        x: 50,
+        y: 221,
+        size: 8,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+
+    return secondPage;
+}
+
+app.use(fileUpload({
+    useTempFiles : true,
+    tempFileDir : '/tmp/',
+    limits: { fileSize: 50 * 1024 * 1024 }
+}));
+
+app.engine('html', require('ejs').renderFile);
+app.set('view engine', 'html');
+app.set('views', __dirname);
+
+app.post('/hit', function(req, res, next) {
+
+    var filename = "GAS.pdf";
 
     filename = encodeURIComponent(filename);
     // Ideally this should strip them
     (async () => {
-        res.setHeader('Content-disposition', 'inline; filename="' + filename + '"');
-        res.setHeader('Content-type', 'application/pdf');
+        //res.setHeader('Content-disposition', 'inline; filename="' + filename + '"');
+        //res.setHeader('Content-type', 'application/pdf');
 
 
-        // This should be a Uint8Array or ArrayBuffer
-        // This data can be obtained in a number of different ways
-        // If your running in a Node environment, you could use fs.readFile()
-        // In the browser, you could make a fetch() call and use res.arrayBuffer()
         const fsPromises = require('fs').promises;
-        const existingPdfBytes = await fsPromises.readFile("./bogen-1.pdf");
+        const existingPdfBytes = await fsPromises.readFile((req.files.pdf) ? req.files.pdf.tempFilePath : "./gas-bogen/de.pdf");
         // Load a PDFDocument from the existing PDF bytes
         const pdfDoc = await PDFDocument.load(existingPdfBytes)
 
         // Embed the Helvetica font
         const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-        // Get the first page of the document
-        const pages = pdfDoc.getPages()
-        const firstPage = pages[0]
+        const mergedPdf = await PDFDocument.create();
 
-        // Get the width and height of the first page
-        const {width, height} = firstPage.getSize()
+        errorArray = [];
+        fs.createReadStream(req.files.csv.tempFilePath)
+            .pipe(csv.parse({headers: true}))
+            .on('data', async (row) => {
+                const arr = Object.values(row);
 
-        if (error) {
-            firstPage.drawText('ERREUR', {
-                x: 40,
-                y: 440,
-                size: 70,
-                font: helveticaFont,
-                color: rgb(0.95, 0.1, 0.1)
+                if (arr.length !== 13) {
+                    console.log(row);
+                    errorArray.push(row);
+                    return;
+                }
+
+                const firstName = arr[1];
+                const lastName = arr[2];
+                const address = arr[3];
+                const zip = arr[4];
+                const city = arr[5];
+                const bday = arr[6];
+                const state = arr[7];
+                const email = arr[8];
+
+                if (!firstName || !lastName || !address || !zip || !city || !bday || !state || !email)  {
+                    console.log(row);
+                    errorArray.push(row);
+                    return;
+                }
+
+                const [firstDonorPage] = await mergedPdf.copyPages(pdfDoc, [0]);
+                const [second] = await mergedPdf.copyPages(pdfDoc, [1]);
+                const fp = fillFirstPage(firstDonorPage, bday, address, city, zip, state, helveticaFont);
+                const fp2 = fillSecondPage(second, firstName, lastName, address, city, zip, helveticaFont);
+
+
+                mergedPdf.addPage(fp);
+                mergedPdf.addPage(fp2);
+
+
+
             })
-        } else {
+            .on('end', () => {
+                console.log('CSV file successfully processed');
 
-            // NPA
-            firstPage.drawText(npa, {
-                x: 50,
-                y: 540,
-                size: 15,
-                font: helveticaFont,
-                color: rgb(0, 0, 0)
+
             })
+            .on('finish',async () => {
+                pdfBytes = await mergedPdf.save();
 
-            // commune
-            firstPage.drawText(communeD, {
-                x: 220,
-                y: 540,
-                size: 15,
-                font: helveticaFont,
-                color: rgb(0, 0, 0)
-            })
-
-            // commune
-            firstPage.drawText(canton, {
-                x: 460,
-                y: 540,
-                size: 11,
-                font: helveticaFont,
-                color: rgb(0, 0, 0)
-            })
-
-            // Date de naissance
-            var date = new Date(bday);
-            firstPage.drawText(date.getDate()+"/"+(date.getMonth()+1)+"/"+date.getFullYear(), {
-                x: 212,
-                y: 480,
-                size: 11,
-                font: helveticaFont,
-                color: rgb(0, 0, 0)
-            })
-
-            // Adresse
-            firstPage.drawText(address, {
-                x: 275,
-                y: 480,
-                size: 11,
-                font: helveticaFont,
-                color: rgb(0, 0, 0)
-            })
-
-        }
-        // Serialize the PDFDocument to bytes (a Uint8Array)
-        const pdfBytes = await pdfDoc.save()
-
-
-        //fs.createWriteStream('bogen-filled.pdf').write(pdfBytes);
-        //res.contentType("application/pdf");
-        //fs.createReadStream(pdfBytes).stream(res);
-
-        var Readable = require('stream').Readable
-
-        var s = new Readable()
-        s.push(pdfBytes)    // the string you want
-        s.push(null)
-
-        s.pipe(res);
+                res.render(__dirname +'/result.html', {nbrOfErrors: errorArray.length});
+            });
     })();
-});*/
+});
+
+app.get('/pdf', function(req, res, next) {
+    if (!pdfBytes) {
+        res.sendStatus(404);
+    }
+    res.setHeader('Content-disposition', 'inline; filename="bogen.pdf"');
+    res.setHeader('Content-type', 'application/pdf');
+
+    var Readable = require('stream').Readable;
+
+    var s = new Readable();
+    s.push(pdfBytes);
+    s.push(null);
+
+    s.pipe(res);
+});
+
+app.get('/csv', async function(req, res, next) {
+    if (errorArray.length === 0) {
+        res.sendStatus(404);
+    }
+
+    const csv = new ObjectsToCsv(errorArray);
+    res.setHeader('Content-disposition', 'attachment; filename=errors.csv');
+    res.set('Content-Type', 'text/csv');
+    res.status(200).send(await csv.toString());
+});
 
 app.listen(process.env.PORT || port, () => {
-    console.log(`Example app listening at http://localhost:${process.env.PORT || port}`)
+    console.log(`App listening at http://localhost:${process.env.PORT || port}`)
 });

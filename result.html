@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>GAS generator Lex Nextflix</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.1/css/bootstrap.css">
+
+    <style>
+        html, body {
+            background: #eee !important;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<!-- Plug Bootstrap Nav Bar code here -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="/">GAS generator</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" target="_blank" href="/pdf">PDF</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" target="_blank" href="/csv">CSV with problems (<%= nbrOfErrors %>)</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<iframe src="/pdf" width="100%" style="height:calc(100% - 56px);"></iframe>
+</body>
+</html>
