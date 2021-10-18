@@ -199,6 +199,12 @@ app.get('/csv', async function(req, res, next) {
     res.status(200).send(await csv.toString());
 });
 
+app.get("/clear", function(req, res) {
+   errorArray = [];
+   pdfBytes = null;
+   res.redirect("/");
+});
+
 app.listen(process.env.PORT || port, () => {
     console.log(`App listening at http://localhost:${process.env.PORT || port}`)
 });
