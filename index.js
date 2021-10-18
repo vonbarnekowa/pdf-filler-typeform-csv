@@ -127,6 +127,7 @@ app.post('/hit', function(req, res, next) {
                 const arr = Object.values(row);
 
                 if (arr.length !== 13) {
+                    console.log("Problem with ");
                     console.log(row);
                     errorArray.push(row);
                     return;
@@ -142,6 +143,7 @@ app.post('/hit', function(req, res, next) {
                 const email = arr[8];
 
                 if (!firstName || !lastName || !address || !zip || !city || !bday || !state || !email)  {
+                    console.log("Problem with ");
                     console.log(row);
                     errorArray.push(row);
                     return;
@@ -156,7 +158,7 @@ app.post('/hit', function(req, res, next) {
                 mergedPdf.addPage(fp);
                 mergedPdf.addPage(fp2);
 
-
+                console.log("Generated PDF for " + firstName + " " + lastName);
 
             })
             .on('end', () => {
